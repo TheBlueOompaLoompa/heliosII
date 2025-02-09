@@ -5,3 +5,4 @@ adafruit-circuitpython-mpu6050
 numpy
 pyserial
 pynmeagps
+zmq

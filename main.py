@@ -1,11 +1,20 @@
-import board
-from adafruit_servokit import ServoKit
 import time
-from ESC import ESC
 import math
+import os
+import asyncio
+import threading
+
+import board
+
+from adafruit_servokit import ServoKit
 import adafruit_mpu6050
-import serial
-from pynmeagps import NMEAReader, NMEAMessage
+from ESC import ESC
+from pymavlink import mavutil
+
+from ipc import IPC, IPCMessage, ThreadID
+from gps import gps_thread_exec
+
+conn = mavutil.mavlink_connection('udpout:' + os.environ['MAV_HOST'] + ':14540')
 
 i2c = board.I2C()
 
@@ -14,9 +23,8 @@ esc = ESC(kit, 0)
 
 imu2 = adafruit_mpu6050.MPU6050(i2c) 
 
-gps_serial = serial.Serial('/dev/ttyS0')
 
-def esc_test():
+async def esc_test():
     print('Running ESC test')
     print('Arming')
     esc.arm()
@@ -29,7 +37,7 @@ def esc_test():
     esc.throttle = 0
 
 
-def imu_test():
+async def imu_test():
     rx = 0
     ry = 0
     rz = 0
@@ -45,17 +53,7 @@ def imu_test():
         time.sleep(0.5)
 
 
-def gps_serial_test():
-    nmr = NMEAReader(gps_serial)
-    while True:
-        raw_data, parsed_data = nmr.read()
-        if parsed_data is not None:
-            msg: NMEAMessage = parsed_data
-            #print(msg)
-            if msg.msgID == 'GGA' and (not(msg.NS is int) or msg.NS == 0):
-                print("No satellites")
-
-def servo_test(channel: int):
+async def servo_test(channel: int):
     print("Running servo test")
     kit.servo[channel].set_pulse_width_range(500, 2700)
     for x in range(5):
@@ -67,5 +65,48 @@ def servo_test(channel: int):
 
 #gps_serial_test()
 
-esc_test()
-servo_test(1)
+async def wait_conn():
+    """
+    Sends a ping to stabilish the UDP communication and awaits for a response
+    """
+    print('waiting')
+    msg = None
+    while not msg:
+        conn.mav.ping_send(
+            int(time.time() * 1e6), # Unix time in microseconds
+            0, # Ping number
+            0, # Request ping of all systems
+            0 # Request ping of all components
+        )
+        msg = conn.recv_match()
+        time.sleep(0.5)
+
+async def mavhost():
+    await wait_conn()
+
+    while True:
+        try:
+            print(conn.recv_match().to_dict())
+        except:
+            pass
+        time.sleep(0.1)
+
+
+def main():
+    print('Starting Helios II Avionics')
+    ipc = IPC(ThreadID.MAIN, True)
+
+    gps_thread = threading.Thread(target=gps_thread_exec)
+    gps_thread.start()
+
+    alive = True
+
+    while True:
+        print(ipc.recv())
+        alive |= gps_thread.is_alive()
+        if not alive:
+            os.kill(os.getpid, -1)
+            print('Death')
+        time.sleep(.1)
+
+main()
