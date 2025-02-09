@@ -1,3 +1,7 @@
 pymavlink
 adafruit-circuitpython-pca9685
 adafruit-circuitpython-servokit
+adafruit-circuitpython-mpu6050
+numpy
+pyserial
+pynmeagps
