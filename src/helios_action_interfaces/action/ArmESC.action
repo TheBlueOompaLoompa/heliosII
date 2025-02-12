@@ -1,0 +1,6 @@
+int32 channel
+---
+int32 channel
+---
+float32 remaining # seconds
+float32 progress # 0-1

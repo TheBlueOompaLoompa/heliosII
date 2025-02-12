@@ -1,0 +1,10 @@
+float32 throttle # 0-1
+float32 time # seconds
+int32 channel
+---
+float32 throttle # 0-1
+float32 time # seconds
+int32 channel
+---
+float32 progress # percent 0-1
+float32 remaining # seconds

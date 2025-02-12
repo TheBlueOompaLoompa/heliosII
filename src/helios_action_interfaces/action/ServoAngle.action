@@ -1,0 +1,10 @@
+int32 angle # degrees
+float32 speed # degrees/s
+int32 channel
+---
+int32 angle # degrees
+int32 channel
+---
+int32 angle # degrees
+float32 progress # percent 0-1
+float32 remaining # seconds
